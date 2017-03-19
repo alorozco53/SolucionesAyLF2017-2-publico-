@@ -1,12 +1,27 @@
-# Recognizes all dates of the form DD/MM/YYYY
-grep -E "\b(0[1-9]|(1|2)\d|3[01])/(0[1-9]|1[012])/\d{4}\b"
+#!/bin/bash
 
-# Changes Spanish infinitive verbs to third person singular past tense
-sed -E "s/\b(\w*)ar\b/\1ó/g"
-sed -E "s/\b(\w*)(er|ir)\b/\1ió/g"
+printf "Executing "
 
-# "Parses" any csv file
-pcregrep -M "^(([^\",\s^$]*|\"(\"{2}|[^\"]|\s|^|$)*\")?($|,))*$"
-
-# Changes http to https and .net to .com
-sed -E "s/https?:\/\/((www\.)?([^n][^e][^t])*?[^\.]+(\.[^n][^e][^t])?)(\.net)?([\w\-\/~\.@=%&_?]*)/https:\/\/\1\.com\6/g"
+case $1 in
+	"ej1" )
+		# Recognizes all dates of the form DD/MM/YYYY
+		echo 'grep -E "\b(0[1-9]|(1|2)\d|3[01])/(0[1-9]|1[012])/\d{4}\b"'
+		grep -E "\b(0[1-9]|(1|2)\d|3[01])/(0[1-9]|1[012])/\d{4}\b" $2 ;;
+	"ej2ar" )
+		# Changes Spanish infinitive verbs to third person singular past tense
+		echo 'sed -E "s\/\b(\w*)ar\b\/\1ó\/g"'
+		sed -E "s/\b(\w*)ar\b/\1ó/g" $2 ;;
+	"ej2erir" )
+		echo 'sed -E "s/\b(\w*)(er|ir)\b/\1ió/g"'
+		sed -E "s/\b(\w*)(er|ir)\b/\1ió/g" $2 ;;
+	"ej3" )
+		# "Parses" any csv file
+		echo 'pcregrep -M "^(([^\",\t\n\r^$]*|\"(\"{2}|[^\"]|\s|^|$)*\")?($|,))*$"'
+		pcregrep -M "^(([^\",\t\n\r^$]*|\"(\"{2}|[^\"]|\s|^|$)*\")?($|,))*$" $2 ;;
+	"ej4" )
+		# Changes http to https and .net to .com
+		echo 'sed -E "s/https?:\/\/((www\.)?([^n][^e][^t])*?[^\.]+(\.[^n][^e][^t])?)(\.net)?([\w\-\/~\.@=%&_?]*)/https:\/\/\1\.com\6/g"'
+		sed -E "s/https?:\/\/((www\.)?([^n][^e][^t])*?[^\.]+(\.[^n][^e][^t])?)(\.net)?([\w\-\/~\.@=%&_?]*)/https:\/\/\1\.com\6/g" $2 ;;
+	* )
+		echo "ERREUR" ;;
+esac
