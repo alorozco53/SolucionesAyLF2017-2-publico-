@@ -31,13 +31,13 @@ case $1 in
 		echo 'sed -E "s/(\")?(.*)([^\.])(\")?,(.*),(.*)/\1\2\3\4\.,\5,\6/g"'
 		sed -E "s/(\")?(.*)([^\.])(\")?,(.*),(.*)/\1\2\3\4\.,\5,\6/g" $2 ;;
 	"ej5c" )
-		# CSV file cleaning
-		echo 'sed -E "s///g"'
-		sed -E "s/(\")?(.*)([\n\r ]*)(\")?,(.*),(.*)/\1\2\4\.,\5,\6/g" $2 ;;
+		# CSV file cleaning: removes double spaces, tabs, and line breaks
+		echo 's/( {2}|\t|\r|\n)*/ /g'
+		sed -E "s/ {2}|\t|\r|\n/ /g" $2 ;;
 	"ej5d" )
-		# CSV file cleaning
+		# CSV file cleaning: removes two or more consecutive dots
 		echo 'sed -E "s///g"'
-		sed -E "s/(\")?(.*)(\.\.)(.*)(\")?,(.*),(.*)/\1\2\4\5\.,\6,\7/g" $2 ;;
+		sed -E "s/\.\.(\.)*/\./g" $2 ;;
 	* )
 		echo "ERREUR" ;;
 esac
