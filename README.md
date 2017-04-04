@@ -1,9 +1,19 @@
 # Solución de la Práctica 1
 ## Author: [AlOrozco53](https://www.github.com/alorozco53/)
 
-Soluciones de las prácticas de laboratorio del curso de Autómatas y Lenguajes Formales, 2107-2. Facultad de Ciencias, UNAM
+### Autómatas finitos
 
-### UNIX-REGEX --> KLEENE-REGEX
+Las soluciones a los primeros cinco ejercicios de la práctica se encuentran en la carpeta [`src/`](src/)
+bajo el nombre `automata__i__.jff`, donde __i__ indica el número del ejercicio. Los pueden ejecutar
+usando JFLAP.
+
+Para el ejercicio _5_, incluí el autómata del lenguaje _L<sub>4</sub>_ en el archivo [`automata5a.jff`](src/automata5a.jff)
+y el autómata del lenguaje _N<sub>2</sub>(L<sub>4</sub>)_.
+
+
+
+
+### Transformación de expresiones regulares UNIX a álgebra de Kleene
 
 | Símbolo UNIX | Símbolo _equivalente_ usado | Significado |
 | ------------ | --------------------------- | ----------- |
