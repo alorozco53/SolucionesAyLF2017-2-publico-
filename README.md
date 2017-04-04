@@ -7,7 +7,7 @@ prácticas establecido en la página del curso.
 ### Autómatas finitos
 
 Las soluciones a los primeros cinco ejercicios de la práctica se encuentran
-bajo el nombre `automata**i**.jff`, donde __i__ indica el número del ejercicio. Los pueden ejecutar
+bajo el nombre `automatai.jff`, donde __i__ indica el número del ejercicio. Los pueden ejecutar
 usando JFLAP.
 
 Para el ejercicio _5_, incluí el autómata del lenguaje _L<sub>4</sub>_ en el archivo [`automata5a.jff`](src/automata5a.jff)
@@ -29,7 +29,7 @@ Si exploran un poco el archivo, se darán cuenta que hay:
 ### Transformación de expresiones regulares UNIX a álgebra de Kleene
 
 Los autómatas que pedí para ciertas regex se encuentran en los archivos que contienen la subcadena `_regex`. Son cosas monstruosamente
-enorme, por lo que sólo los pedí como evidencia de que usaron la herramienta de JFLAP para generarlos.
+enormes, por lo que sólo los pedí como evidencia de que usaron la herramienta de JFLAP para generarlos.
 
 Para construirlos, utilicé la siguiente tabla de equivalencias, ya que JFLAP trata un símbolo formado por dos carácteres
 de manera separada.
