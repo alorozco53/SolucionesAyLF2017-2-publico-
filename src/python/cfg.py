@@ -6,6 +6,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import argparse
 
 class CFG:
     """A class that models a context-free grammar.
@@ -29,6 +30,11 @@ class CFG:
         self.N = set(non_terminals) if non_terminals is not None else None
         self.P = productions
         self.S = initial_symbol
+
+        if self.V:
+            assert epsilon not in self.V
+        if self.N:
+            assert epsilon not in self.N
         self.epsilon = epsilon
 
     def in_cnf(self):
@@ -47,13 +53,11 @@ class CFG:
                     return False
         return True
 
-    def parse_classic(self, filepath='grammar.cfg'):
-        pass
-
-    def parse_waterloo(self, filepath='grammar.cfg'):
+    def parse_from_file(self, filepath='grammar.cfg'):
         """Parses a grammar in 'waterloo' format. See [https://www.student.cs.uwaterloo.ca/~cs241/cfg/cfg.html], and
         [../README.md](the readme) for more info.
         """
+        assert os.path.exists(filepath)
         with open(filepath, 'r') as f:
             state = 0
             for line in f:
@@ -63,6 +67,7 @@ class CFG:
                     assert t >= 0
                     state = 1 if t > 0 else 2
                 elif state == 1:
+                    assert cont != self.epsilon
                     if self.V is None:
                         self.V = [cont]
                     else:
@@ -75,6 +80,7 @@ class CFG:
                     assert n >= 0
                     state = 3 if n > 0 else 4
                 elif state == 3:
+                    assert cont != self.epsilon
                     if self.N is None:
                         self.N = [cont]
                     else:
@@ -97,37 +103,32 @@ class CFG:
                     lhs = tokenized[0]
                     rhs = tokenized[1:]
                     assert rhs != []
+                    assert lhs in self.N
+                    for symb in rhs:
+                        assert symb in self.N or symb in self.V or symb == self.epsilon
                     if self.P is None:
-                        self.P = {lhs: [rhs]}
+                        self.P = {lhs: set([tuple(rhs)])}
                     else:
                         try:
-                            self.P[lhs].append(rhs)
+                            self.P[lhs].add(tuple(rhs))
                         except KeyError:
-                            self.P[lhs] = [rhs]
+                            self.P[lhs] = set([tuple(rhs)])
                     r -= 1
                     if r == 0:
                         break
         self.V = set(self.V)
         self.N = set(self.N)
 
-    def parse_from_file(self, form='waterloo', filepath='grammar.cfg'):
-        """Calls a parser to read a grammar from filepath, according to the given format
-        """
-        assert form in ['waterloo', 'classic']
-        assert os.path.exists(filepath)
-        if form == 'waterloo':
-            self.parse_waterloo(filepath)
-        else:
-            self.parse_classic(filepath)
-
     def remove_epsilons(self):
+        """
+        Removes productions with the form A -> self.epsilon from the grammar
+        """
         assert self.P is not None
-
         # identify non-terminals with epsilon productions
         epsilon_nts = []
         for head, bodies in self.P.items():
             for body in bodies:
-                if body == [self.epsilon]:
+                if body == tuple(self.epsilon):
                     epsilon_nts.append(head)
 
         # add new productions
@@ -138,15 +139,118 @@ class CFG:
                     for i, sym in enumerate(body):
                         if ep == sym:
                             try:
-                                new_prods[head].append(body[:i-1] + body[i:])
+                                new_prods[head].add(body[:i] + body[i+1:])
                             except KeyError:
-                                new_prods[head] = [body[:i] + body[i+1:]]
+                                new_prods[head] = {body[:i] + body[i+1:]}
         for np, bs in new_prods.items():
-            self.P[np] += bs
+            self.P[np] = self.P[np].union(bs)
 
         # delete epsilon productions
         for ep in epsilon_nts:
-            self.P[ep] = list(filter(lambda a: a != [self.epsilon], self.P[ep]))
+            self.P[ep].discard(tuple(self.epsilon))
+
+    # def free_of_unit_productions(self):
+    #     """
+    #     Checks if there are unit productions in the grammar.
+    #     :returns True: if there aren't any productions with the form A -> B, where A and B are in self.N
+    #     """
+    #     assert self.P is not None
+
+    #     for _, bodies in self.P.items():
+    #         for body in bodies:
+    #             if len(body) == 1 and body[0] in self.N:
+    #                 return False
+    #     return True
+
+
+    def remove_unit_productions(self):
+        """
+        Removes productions with the form A -> B, where A and B are in self.N
+        """
+        assert self.P is not None
+
+        while True:
+            # identify non_terminals with unit productions
+            unit_prods = []
+            for head, bodies in self.P.items():
+                for body in bodies:
+                    if len(body) == 1 and body[0] in self.N:
+                        unit_prods.append((head, body[0]))
+
+            if len(unit_prods) == 0:
+                break
+
+            # remove unit productions
+            for h, b in unit_prods:
+                try:
+                    self.P[h] = self.P[h].union(self.P[b])
+                except KeyError:
+                    pass
+                self.P[h].discard(tuple([b]))
+
+
+    def new_nt(self, base='A'):
+        """
+        Generates a new non terminal symbol, with prefix base.
+        :returns str:
+        """
+        count = 0
+        while True:
+            candidate = base + str(count)
+            if candidate not in self.N:
+                return candidate
+            count += 1
+        return None
+
+    def remove_terminals(self):
+        """
+        Given a production A -> alpha, where alpha is a non-unit sentennial,
+        removes any terminal a in alpha by adding a new non-terminal Aa -> a, and
+        substituting Aa in all occurrences
+        """
+        assert self.P is not None
+
+        # check for terminals
+        terminals = {}
+        for _, bodies in self.P.items():
+            for body in bodies:
+                if len(body) > 1:
+                    for symb in body:
+                        if symb in self.V:
+                            nnt = self.new_nt()
+                            if symb not in terminals.keys():
+                                self.N.add(nnt)
+                                terminals[symb] = nnt
+
+        # make replacements
+        new_bodies = {}
+        trash = {}
+        for head, bodies in self.P.items():
+            for body in bodies:
+                if len(body) > 1:
+                    tmp = list(body)
+                    for i in range(len(tmp)):
+                        try:
+                            tmp[i] = terminals[tmp[i]]
+                        except KeyError:
+                            pass
+                try:
+                    new_bodies[head].add(tuple(tmp))
+                    trash[head].add(body)
+                except KeyError:
+                    new_bodies[head] = {tuple(tmp)}
+                    trash[head] = {body}
+
+        # rearrange grammar
+        for k in new_bodies.keys():
+            for item in trash[k]:
+                self.P[k].discard(item)
+            for item in new_bodies[k]:
+                self.P[k].add(item)
+        for k, b in terminals.items():
+            self.P[b] = {tuple([k])}
+
+
 
 
     def __str__(self):
@@ -172,9 +276,13 @@ class CFG:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='script\'s argument parser')
+    parser.add_argument('-g', help='(optional) grammar file path to be parsed', default='grammar.cfg')
+    args = parser.parse_args()
     cfg = CFG()
-    cfg.parse_from_file()
+    cfg.parse_from_file(args.g)
     print(cfg)
-    # print(cfg.in_cnf())
     cfg.remove_epsilons()
+    cfg.remove_unit_productions()
+    cfg.remove_terminals()
     print(cfg)
