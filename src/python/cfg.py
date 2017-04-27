@@ -102,7 +102,8 @@ class CFG:
                     assert tokenized != []
                     lhs = tokenized[0]
                     rhs = tokenized[1:]
-                    assert rhs != []
+                    if rhs == []:
+                        rhs = [self.epsilon]
                     assert lhs in self.N
                     for symb in rhs:
                         assert symb in self.N or symb in self.V or symb == self.epsilon
@@ -149,20 +150,6 @@ class CFG:
         for ep in epsilon_nts:
             self.P[ep].discard(tuple(self.epsilon))
 
-    # def free_of_unit_productions(self):
-    #     """
-    #     Checks if there are unit productions in the grammar.
-    #     :returns True: if there aren't any productions with the form A -> B, where A and B are in self.N
-    #     """
-    #     assert self.P is not None
-
-    #     for _, bodies in self.P.items():
-    #         for body in bodies:
-    #             if len(body) == 1 and body[0] in self.N:
-    #                 return False
-    #     return True
-
-
     def remove_unit_productions(self):
         """
         Removes productions with the form A -> B, where A and B are in self.N
@@ -189,14 +176,15 @@ class CFG:
                 self.P[h].discard(tuple([b]))
 
 
-    def new_nt(self, base='A'):
+    def new_nt(self, prefix='A'):
         """
-        Generates a new non terminal symbol, with prefix base.
-        :returns str:
+        Generates a new non terminal symbol, with the given prefix.
+        :returns str: a brand new symbol not included in self.N
+        REMARK: This method doesn't update self.N!
         """
         count = 0
         while True:
-            candidate = base + str(count)
+            candidate = prefix + str(count)
             if candidate not in self.N:
                 return candidate
             count += 1
@@ -234,12 +222,12 @@ class CFG:
                             tmp[i] = terminals[tmp[i]]
                         except KeyError:
                             pass
-                try:
-                    new_bodies[head].add(tuple(tmp))
-                    trash[head].add(body)
-                except KeyError:
-                    new_bodies[head] = {tuple(tmp)}
-                    trash[head] = {body}
+                    try:
+                        new_bodies[head].add(tuple(tmp))
+                        trash[head].add(body)
+                    except KeyError:
+                        new_bodies[head] = {tuple(tmp)}
+                        trash[head] = {body}
 
         # rearrange grammar
         for k in new_bodies.keys():
@@ -250,7 +238,52 @@ class CFG:
         for k, b in terminals.items():
             self.P[b] = {tuple([k])}
 
+    def to_cnf(self):
+        """
+        Transforms the current grammar to Chomsky normal form
+        """
+        assert self.P is not None
 
+        if not self.in_cnf():
+            # remove epsilons, unit productions and terminals
+            self.remove_epsilons()
+            self.remove_unit_productions()
+            self.remove_terminals()
+
+            # identify all sentennials with length greater than 2
+            large_sents = {}
+            for head, bodies in self.P.items():
+                for body in bodies:
+                    if len(body) > 2:
+                        try:
+                            large_sents[head].add(body)
+                        except KeyError:
+                            large_sents[head] = {body}
+
+            # Factor all needed strings from each large sentennial and
+            # remove large sentennials
+            factored_sents = {}
+            for head, bodies in large_sents.items():
+                for sent in bodies:
+                    self.P[head].discard(sent)
+                    suffix = sent[1:]
+                    pref = tuple([sent[0]])
+                    dummy_head = head
+                    while True:
+                        new_head = self.new_nt(prefix='Z')
+                        self.N.add(new_head)
+                        new_body = pref + tuple([new_head])
+                        try:
+                            self.P[dummy_head].add(new_body)
+                        except KeyError:
+                            self.P[dummy_head] = {new_body}
+                        if len(suffix) > 2:
+                            pref = tuple([suffix[0]])
+                            suffix = suffix[1:]
+                            dummy_head = new_head
+                        else:
+                            self.P[new_head] = {suffix}
+                            break
 
 
     def __str__(self):
@@ -282,7 +315,6 @@ if __name__ == '__main__':
     cfg = CFG()
     cfg.parse_from_file(args.g)
     print(cfg)
-    cfg.remove_epsilons()
-    cfg.remove_unit_productions()
-    cfg.remove_terminals()
+    cfg.to_cnf()
     print(cfg)
+    print(cfg.in_cnf())
