@@ -285,6 +285,43 @@ class CFG:
                             self.P[new_head] = {suffix}
                             break
 
+    def cky(self, w):
+        """
+        Iterative implementation of the Cocke-Kasami-Younger algorithm for parsing.
+        Parameter:
+        :w: string to be parsed
+        """
+        assert self.P is not None
+        try:
+            assert self.in_cnf()
+        except AssertionError:
+            print('This grammar is not in CNF! Please call self.to_cnf()')
+            return
+
+        # non-terminal matrix
+        matrix = [[set() for _ in range(len(w) + 1)] for _ in range(len(w) + 1)]
+
+        # check all unit substrings
+        for i in range(len(w)):
+            for head, bodies in self.P.items():
+                for body in bodies:
+                    if len(body) == 1:
+                        if body[0] == w[i:i+1]:
+                            matrix[i][i+1].add(head)
+
+        # check substrings of length > 1
+        for m in range(2, len(w)+1):
+            for i in range(0, len(w)-m+1):
+                for j in range(i+1, i+m):
+                    for head, bodies in self.P.items():
+                        for body in bodies:
+                            if len(body) == 2:
+                                if body[0] in matrix[i][j] and body[1] in matrix[j][i+m]:
+                                    matrix[i][i+m].add(head)
+
+        for l in matrix:
+            print(l)
+        return self.S in matrix[0][len(w)]
 
     def __str__(self):
         """
@@ -310,11 +347,12 @@ class CFG:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script\'s argument parser')
-    parser.add_argument('-g', help='(optional) grammar file path to be parsed', default='grammar.cfg')
+    parser.add_argument('-g', help='grammar file path to be used', default='grammar.cfg')
+    parser.add_argument('-w', help='string to be parsed')
     args = parser.parse_args()
     cfg = CFG()
     cfg.parse_from_file(args.g)
     print(cfg)
     cfg.to_cnf()
     print(cfg)
-    print(cfg.in_cnf())
+    print(cfg.cky(args.w))
