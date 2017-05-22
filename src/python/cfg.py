@@ -11,13 +11,19 @@ import argparse
 class CFG:
     """A class that models a context-free grammar.
     Parameters:
+    :verbose_mode flag: True or False
     :N: list of non-terminals
     :V: list of terminals
     :P: dictionary of productions
     :S: initial symbol
     """
 
-    def __init__(self, terminals=None, non_terminals=None, initial_symbol=None, productions=None, epsilon='!'):
+    def __init__(self, verbose_mode,
+                 terminals=None,
+                 non_terminals=None,
+                 initial_symbol=None,
+                 productions=None,
+                 epsilon='!'):
         # check that terminals and non_terminals are disjoint
         if terminals is not None and non_terminals is not None:
             assert set(terminals).isdisjoint(set(non_terminals))
@@ -26,6 +32,7 @@ class CFG:
         if initial_symbol is not None and non_terminals is not None:
             assert initial_symbol in non_terminals
 
+        self.verbose = verbose_mode
         self.V = set(terminals) if terminals is not None else None
         self.N = set(non_terminals) if non_terminals is not None else None
         self.P = productions
@@ -285,11 +292,11 @@ class CFG:
                             self.P[new_head] = {suffix}
                             break
 
-    def cky(self, w):
+    def cky(self, input_str):
         """
         Iterative implementation of the Cocke-Kasami-Younger algorithm for parsing.
         Parameter:
-        :w: string to be parsed
+        :input_str: string to be parsed
         """
         assert self.P is not None
         try:
@@ -297,6 +304,9 @@ class CFG:
         except AssertionError:
             print('This grammar is not in CNF! Please call self.to_cnf()')
             return
+
+        # pre-process input string
+        w = input_str.split()
 
         # non-terminal matrix
         matrix = [[set() for _ in range(len(w) + 1)] for _ in range(len(w) + 1)]
@@ -306,7 +316,7 @@ class CFG:
             for head, bodies in self.P.items():
                 for body in bodies:
                     if len(body) == 1:
-                        if body[0] == w[i:i+1]:
+                        if body[0] == w[i:i+1][0]:
                             matrix[i][i+1].add(head)
 
         # check substrings of length > 1
@@ -319,8 +329,9 @@ class CFG:
                                 if body[0] in matrix[i][j] and body[1] in matrix[j][i+m]:
                                     matrix[i][i+m].add(head)
 
-        for l in matrix:
-            print(l)
+        if self.verbose:
+            for l in matrix:
+                print(l)
         return self.S in matrix[0][len(w)]
 
     def __str__(self):
@@ -349,10 +360,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script\'s argument parser')
     parser.add_argument('-g', help='grammar file path to be used', default='grammar.cfg')
     parser.add_argument('-w', help='string to be parsed')
+    parser.add_argument('-v', help='verbose mode', action='store_true')
     args = parser.parse_args()
-    cfg = CFG()
+    cfg = CFG(args.v)
     cfg.parse_from_file(args.g)
+    print('Recognized grammar:')
     print(cfg)
-    cfg.to_cnf()
-    print(cfg)
+    if not cfg.in_cnf():
+        cfg.to_cnf()
+        print('Transformed grammar to CNF:')
+        print(cfg)
     print(cfg.cky(args.w))
