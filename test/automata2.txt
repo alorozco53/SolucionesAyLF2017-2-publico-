@@ -1,0 +1,10 @@
+ reject
+aaaaaaaa reject
+bbbbbbbb reject
+ababababba reject
+bbbbabbbaa reject
+aaaaabaa accept
+aabbaaaaaaaaaaa accept
+bbbbababababbaaa accept
+abaabbababba accept
+bbbbbbbbabb accept
